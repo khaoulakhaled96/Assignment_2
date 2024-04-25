@@ -1,0 +1,132 @@
+<?xml version="1.0"?>
+<!--
+(c) 2005-2015 Copyright, Real-Time Innovations.  All rights reserved.
+No duplications, whole or partial, manual or electronic, may be made
+without express written permission.  Any such copies, or revisions thereof,
+must display this notice unaltered.
+This code contains trade secrets of Real-Time Innovations, Inc.
+ -->
+
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="https://community.rti.com/schema/current/rti_dds_qos_profiles.xsd">
+
+    <!-- Qos Library -->
+    <qos_library name="QosLibrary">
+        <qos_profile name="DefaultProfile"
+                     base_name="BuiltinQosLib::Generic.StrictReliable"
+                     is_default_qos="true">
+            <domain_participant_qos>
+                <participant_name>
+                    <name>Connector Patient Vital Signs</name>
+                </participant_name>
+            </domain_participant_qos>
+            
+            <datareader_qos>
+                <reliability>
+                     <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+                </reliability>
+
+                <durability>
+                    <kind>PERSISTENT_DURABILITY_QOS</kind>
+                </durability>
+
+                <history>
+                     <kind>KEEP_LAST_HISTORY_QOS</kind>
+                </history>
+
+            </datareader_qos>
+
+            <datawriter_qos>
+                <reliability>
+                     <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+                </reliability>
+
+                <durability>
+                    <kind>PERSISTENT_DURABILITY_QOS</kind>
+                </durability>
+
+                <history>
+                     <kind>KEEP_LAST_HISTORY_QOS</kind>
+                </history>
+
+            </datawriter_qos>
+
+        </qos_profile>
+    </qos_library>
+
+    <!-- types -->
+    <types>
+        <struct name="PatientVitalSign">
+            <member name="patienID" stringMaxLength="16" type="string" key="true"/>
+            <member name="HeartRate" type="long"/>
+            <member name="BloodPressuer" type="long"/>
+            <member name="OxygenSaturation" type="long"/>
+        </struct>
+
+        <struct name="HP_Request">
+            <member name="HP_ID" stringMaxLength="16" type="string" key="true"/>
+            <member name="Req" stringMaxLength="32" type="string"/>
+        </struct>
+
+        <struct name="PatientData">
+            <member name="HP_ID" stringMaxLength="16" type="string" key="true"/>
+            <member name="patienID" stringMaxLength="64" type="string" key="true"/>
+            <member name="HeartRate" type="long"/>
+            <member name="BloodPressuer" type="long"/>
+            <member name="OxygenSaturation" type="long"/>
+        </struct>
+
+    </types>
+
+    <!-- Domain Library -->
+    <domain_library name="MyDomainLibrary">
+        <domain name="MyDomain" domain_id="0">
+            <register_type name="PatientVitalSign" type_ref="PatientVitalSign" />
+            <topic name="Patient" register_type_ref="PatientVitalSign"/>
+
+            <register_type name="HP_Request" type_ref="HP_Request" />
+            <topic name="HP_Req" register_type_ref="HP_Request"/>
+
+            <register_type name="PatientData" type_ref="PatientData" />
+            <topic name="Patient_Data" register_type_ref="PatientData"/>
+        </domain>
+    </domain_library>
+
+    <!-- Participant library -->
+    <domain_participant_library name="MyParticipantLibrary">
+        <!-- The Sensor Connector only publishes Pathien Data -->
+        <domain_participant name="SensorPubParticipant" domain_ref="MyDomainLibrary::MyDomain">
+            <publisher name="SensorPublisher">
+                <data_writer name="SensorWriter" topic_ref="Patient" />
+            </publisher>
+        </domain_participant>
+
+
+        <!-- the Server connector can both publish read and write data in the same application -->
+        <domain_participant name="ServerParticipant" domain_ref="MyDomainLibrary::MyDomain">
+            
+            <subscriber name="ServerSubscriber">
+                <data_reader name="Server_Sensor_Reader" topic_ref="Patient" />
+                <data_reader name="Server_HP_Reader" topic_ref="HP_Req" />
+            </subscriber>
+
+            <publisher name="ServerPublisher">
+                <data_writer name="ServerWriter" topic_ref="Patient_Data" />
+            </publisher>
+        </domain_participant>
+
+        <!-- the Healthcare Provider connector can both publish read and write data in the same application -->
+        <domain_participant name="HealthcareProviderParticipant" domain_ref="MyDomainLibrary::MyDomain">
+            
+            <subscriber name="HPSubscriber">
+                <data_reader name="HPReader" topic_ref="Patient_Data" />
+            </subscriber>
+
+            <publisher name="HPPublisher">
+                <data_writer name="HPWriter" topic_ref="HP_Req" />
+            </publisher>
+
+        </domain_participant>
+
+    </domain_participant_library>
+</dds>
